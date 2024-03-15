@@ -1,0 +1,219 @@
+The LA_crimes_since_2020 collection has 892934 records of crimes committed in LA since 2020. It’s fields are: [_id, DR_NO, Date Rptd, DATE OCC, TIME OCC, AREA, AREA NAME, Rpt Dist No, Part 1-2, Crm Cd, Crm Cd Desc, Mocodes, Vict Age, Vict Sex, Vict Descent, Premis Cd, Premis Desc, Weapon Used Cd, Weapon Desc, Status, Status Desc, Crm Cd 1, Crm Cd 2, Crm Cd 3, Crm Cd 4, LOCATION, Cross Street, LAT, LON]
+-	Some of these names are not very descriptive, so:
+1.	How can we rename multiple fields with one query to a more descriptive name?
+
+db.LA_crimes_since_2020.updateMany({}, {$rename: {"DR_NO": "ReportNumber", "Date Rptd": "DateReported", "DATE OCC": "DateOccurred", "TIME OCC": "TimeOccurred", "AREA": "AreaCode", "AREA NAME": "AreaName", "Rpt Dist No": "ReportDistrictNumber", "Part 1-2": "PartOneOrTwo", "Crm Cd": "CrimeCode", "Crm Cd Desc": "CrimeDescription", "Mocodes": "ModusOperandiCodes", "Vict Age": "VictimAge", "Vict Sex": "VictimSex", "Vict Descent": "VictimDescent", "Premis Cd": "PremiseCode", "Premis Desc": "PremiseDescription", "Weapon Used Cd": "WeaponUsedCode", "Weapon Desc": "WeaponDescription", "Status": "CaseStatus", "Status Desc": "CaseStatusDescription", "Crm Cd 1": "PrimaryCrimeCode", "Crm Cd 2": "SecondaryCrimeCode", "Crm Cd 3": "TertiaryCrimeCode", "Crm Cd 4": "QuaternaryCrimeCode", "LOCATION": "LocationAddress", "Cross Street": "CrossStreet", "LAT": "Latitude", "LON": "Longitude"}});
+
+-	The ({}, syntax at the beginning of the query is used for queries that need to be applied to all 
+
+2.	What are the different types of thefts in the LA_crimes_since_2020 and how many of each crime were commited? – (GRAPH)
+
+db.LA_crimes_since_2020.distinct("CrimeDescription");
+-	This queries show us all the individual ccrime descriptions in LA contained in the records. 
+o	For example: 'ARSON', 'ASSAULT WITH DEADLY WEAPON ON POLICE OFFICER', 'ASSAULT WITH DEADLY WEAPON, AGGRAVATED ASSAULT', 'ATTEMPTED ROBBERY', 'BATTERY - SIMPLE ASSAULT', 'BATTERY ON A FIREFIGHTER', 'BATTERY POLICE (SIMPLE)', 'BATTERY WITH SEXUAL CONTACT', 'BEASTIALITY, CRIME AGAINST NATURE SEXUAL ASSLT WITH ANIM', 'BIGAMY'…
+-	To know how many of each of these were committed, we need to do an aggregation query:
+
+db.LA_crimes_since_2020.aggregate({$group: {_id: "$CrimeDescription", count: { $sum: 1 }}});
+
+-	Results:
+
+US_Crimes_Since_2020> db.LA_crimes_since_2020.aggregate({$group: {_id: "$CrimeDescription", count: { $s$sum: 1 }}});
+[{ _id: 'CHILD STEALING', count: 419 },
+{ _id: 'VEHICLE, STOLEN - OTHER (MOTORIZED SCOOTERS, BIKES, ETC)', count: 1952},
+  { _id: 'RAPE, FORCIBLE', count: 3550 },
+  { _id: 'LEWD CONDUCT', count: 657 },
+  { _id: 'CHILD ABUSE (PHYSICAL) - AGGRAVATED ASSAULT', count: 586 },
+  { _id: 'DOCUMENT WORTHLESS ($200 & UNDER)', count: 27 },
+  { _id: 'THEFT PLAIN - ATTEMPT', count: 444 },
+  { _id: 'VIOLATION OF RESTRAINING ORDER', count: 11228 },
+  { _id: 'WEAPONS POSSESSION/BOMBING', count: 39 },
+  { _id: 'REPLICA FIREARMS(SALE,DISPLAY,MANUFACTURE OR DISTRIBUTE)', count: 11},
+  { _id: 'DISRUPT SCHOOL', count: 12 },
+  { _id: 'ASSAULT WITH DEADLY WEAPON ON POLICE OFFICER', count: 1029 },
+  { _id: 'SEX,UNLAWFUL(INC MUTUAL CONSENT, PENETRATION W/ FRGN OBJ', count: 985 },
+  { _id: 'LYNCHING', count: 21 },
+  { _id: 'CHILD PORNOGRAPHY', count: 247 },
+  { _id: 'PURSE SNATCHING', count: 103 },
+  { _id: 'ARSON', count: 2431 },
+  { _id: 'ASSAULT WITH DEADLY WEAPON, AGGRAVATED ASSAULT', count: 50904},
+  { _id: 'EMBEZZLEMENT, PETTY THEFT ($950 & UNDER)', count: 131 },
+  { _id: 'THEFT, COIN MACHINE - GRAND ($950.01 & OVER)', count: 8 }...
+
+3.	How many particular crimes were reported in each area area? – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([{ $match: {CrimeDescription: "VEHICLE - STOLEN"}}, {$group: {_id: "$AreaName", Count: { $sum: 1 }}}, {$sort: {Count: -1}}]);
+
+-	This aggregation will find all crimes that match the specified decription, then it will group the documents by AreaName, count the number of occurrences for each crime description within each area, and then sort the results by the count of crimes in descending order.
+-	In the context of an aggregation query _id is used within the $group stage to specify the grouping criteria. Each unique _id in the $group stage represents a group of documents that share the same value or values for the specified field or fields.
+
+-	Results: 
+[{ _id: '77th Street', Count: 7381 },
+  { _id: 'Newton', Count: 7009 },
+  { _id: 'Southeast', Count: 6052 },
+  { _id: 'Southwest', Count: 5511 },
+  { _id: 'Pacific', Count: 5487 },
+  { _id: 'Hollenbeck', Count: 5218 },
+  { _id: 'Harbor', Count: 5138 },
+  { _id: 'Mission', Count: 4890 },
+  { _id: 'Olympic', Count: 4862 },
+  { _id: 'Rampart', Count: 4560 },
+  { _id: 'Northeast', Count: 4529 },
+  { _id: 'N Hollywood', Count: 4162 },
+  { _id: 'Central', Count: 3975 },
+  { _id: 'Van Nuys', Count: 3813 },
+  { _id: 'Foothill', Count: 3746 },
+  { _id: 'West Valley', Count: 3571 },
+  { _id: 'Wilshire', Count: 3504 },
+  { _id: 'Hollywood', Count: 3387 },
+  { _id: 'Devonshire', Count: 3277 },
+  { _id: 'West LA', Count: 2952 }]
+
+4.	Find all specific crimes where the victim is between a specify age range and the theft occurred:
+
+db.LA_crimes_since_2020.find({"CrimeDescription": "VEHICLE - STOLEN", "VictimAge": {"$gte": 0, "$lte": 40}});
+
+-	This query uses a list of conditions which includes $gte (greater than), and $lte (lest than) to find crimes where the victims age was in a specified age range.
+
+-	Result
+[{
+    _id: ObjectId('65d15ea3da564c25d91d10b5'),
+    AreaCode: 7,
+    AreaName: 'Wilshire',
+    CaseStatus: 'AA',
+    CaseStatusDescription: 'Adult Arrest',
+    CrimeCode: 510,
+    CrimeDescription: 'VEHICLE - STOLEN',
+    CrossStreet: null,
+    DateOccurred: '03/01/2020 12:00:00 AM',
+    DateReported: '03/01/2020 12:00:00 AM',
+    Latitude: 34.0375,
+    LocationAddress: '1900 S  LONGWOOD                     AV',
+    Longitude: -118.3506,
+    ModusOperandiCodes: null,
+    PartOneOrTwo: 1,
+    PremiseCode: 101,
+    PremiseDescription: 'STREET',
+    PrimaryCrimeCode: 510,
+    QuaternaryCrimeCode: null,
+    ReportDistrictNumber: 784,
+    ReportNumber: 190326475,
+    SecondaryCrimeCode: 998,
+    TertiaryCrimeCode: null,
+    TimeOccurred: 2130,
+    VictimAge: 0,
+    VictimDescent: 'O',
+    VictimSex: 'M',
+    WeaponDescription: null,
+    WeaponUsedCode: null},
+  {_id: ObjectId('65d15ea3da564c25d91d10c3'),
+    AreaCode: 10,.....
+
+
+
+
+5.	How many of a specific crime description were reported within a specific number of miles from an area?
+
+-	To achieve this query we can use GeoJSON or legacy Coordinate Pairs. I’ll do this using coordinate pairs because we already have the direction as an attribute in the collection. 
+-	First we have to covert the latitude and longitude attributes into coordinate pairs.
+
+db.LA_crimes_since_2020.updateMany({}, [{$set: {"location": ["$Longitude", "$Latitude"]}}])
+
+-	Then we add and index to the coordinate pair
+
+db.LA_crimes_since_2020.createIndex({ "location": "2d" })
+
+-	Now we can query efficiently based on the coordinate of record
+-	We will find all vehicles stolen reports within 10000 meters (since our coordinates are in degrees we have to convert from meters to radians: 10000/6371000) of the center of the Wilshire area (coordinates = [-118.342933, 34.059486]) 
+
+db.LA_crimes_since_2020.countDocuments({"CrimeDescription": "VEHICLE - STOLEN", "location": {"$geoWithin": {"$center": [[-118.342933, 34.059486], 10000 / 6371000]}}});
+
+-	Result:
+8
+
+6.	Calculate the average age of victims grouped by the crime – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([{$group: {_id: "$CrimeDescription", averageAge: { $avg: "$VictimAge" }}}]);
+
+-	Results:
+-	*We must note that the average age results will be lower than the real average because victims of unknown ages have their age listed as 0.
+[ { _id: 'THEFT OF IDENTITY', averageAge: 40.84361619482936 },
+  { _id: 'BEASTIALITY, CRIME AGAINST NATURE SEXUAL ASSLT WITH ANIM', averageAge: 19.7},
+  { _id: 'EMBEZZLEMENT, GRAND THEFT ($950.01 & OVER)', averageAge: 5.531574515857423},
+  { _id: 'FALSE IMPRISONMENT', averageAge: 33.43425076452599 },
+  { _id: 'PIMPING', averageAge: 21.19047619047619 },
+  { _id: 'GRAND THEFT / INSURANCE FRAUD', averageAge: 45.25 },
+  { _id: 'BIKE - ATTEMPTED STOLEN', averageAge: 38.5 },
+  { _id: 'FALSE POLICE REPORT', averageAge: 19.86335403726708 },
+  { _id: 'BOAT - STOLEN', averageAge: 0 },
+  { _id: 'SHOPLIFTING-GRAND THEFT ($950.01 & OVER)', averageAge: 11.368455640744797},
+  { _id: 'BATTERY WITH SEXUAL CONTACT', averageAge: 30.79662749105774 },
+  { _id: 'BRIBERY', averageAge: 20 },
+  { _id: 'DRUGS, TO A MINOR', averageAge: 8.363636363636363 },
+  { _id: 'DEFRAUDING INNKEEPER/THEFT OF SERVICES, $950 & UNDER', averageAge: 10.736666666666666},
+  { _id: 'VEHICLE - STOLEN', averageAge: 0.12366219514739324 },
+  { _id: 'TRESPASSING', averageAge: 25.70734781641581 },
+  { _id: 'BUNCO, PETTY THEFT', averageAge: 38.763116883116886 },
+  { _id: 'KIDNAPPING', averageAge: 26.24462365591398 },
+  { _id: 'CHILD ABUSE (PHYSICAL) - SIMPLE ASSAULT', averageAge: 11.22923588039867},
+  { _id: 'THROWING OBJECT AT MOVING VEHICLE', averageAge: 34.645637583892615}]
+
+7.	What is the distribution of the ages of the victims of a specific crime? – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([{$match: {CrimeDescription: "BIKE - STOLEN" } }, {$group:{_id: "$VictimAge", count: {$sum: 1}}}, {$sort: {_id: 1}}]);
+
+-	The $match stage filters the documents to only include those with the CrimeDescription "VEHICLE - STOLEN".
+-	The $group stage groups the documents by the VictimAge field and counts the number of documents in each group.
+-	The $sort stage sorts the results by the victim age in ascending order (_id: 1).
+
+-	Result: 
+[{ _id: 0, count: 249 },  { _id: 2, count: 1 },
+  { _id: 7, count: 2 },    { _id: 10, count: 1 },
+  { _id: 12, count: 2 },   { _id: 13, count: 10 },
+  { _id: 14, count: 14 },  { _id: 15, count: 12 },
+  { _id: 16, count: 14 },  { _id: 17, count: 25 },
+  { _id: 18, count: 106 }, { _id: 19, count: 160 },
+  { _id: 20, count: 214 }, { _id: 21, count: 221 },
+  { _id: 22, count: 200 }, { _id: 23, count: 177 },
+  { _id: 24, count: 212 }, { _id: 25, count: 197 },
+  { _id: 26, count: 222 }, { _id: 27, count: 213 }]
+
+8.	How many of a crime occurred at each time? – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([{$match: {CrimeDescription: "INCITING A RIOT"}}, {$group: {_id: {$substr: ["$TimeOccurred", 0, 2]}, count: {$sum: 1}}}, {$sort: {_id: 1}}]);
+
+-	Result:
+[ { _id: '10', count: 15 },
+  { _id: '12', count: 1 },
+  { _id: '13', count: 1 },
+  { _id: '94', count: 2 },
+  { _id: '95', count: 2 }]
+-	The $match stage filters the documents to only include those with the CrimeDescription "INCITING A RIOT".
+-	The $group stage groups the documents by the hour, extracted using the $substr operator, which takes the first two characters of the TimeOccurred field.
+-	The $sort stage sorts the results by the hour in ascending order.
+
+9.	what was the crime count of a specific crime in the area taht had the highest number of that crime? – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([ {"$match": {"CrimeDescription": "BOMB SCARE"}}, {"$group": {"_id": "$AREA NAME", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}, {"$limit": 1}]);
+ 
+-	The $match stage filters the documents to only include those with the CrimeDescription "INCITING A RIOT".
+-	The $group stage groups the documents by the hour, extracted using the $substr operator, which takes the first two characters of the TimeOccurred field.
+-	The $sort stage sorts the results by the hour in ascending order.
+-	The $project stage selects the data that of the pipeline that is going to be returned
+
+- 	Result:
+[ { _id: null, count: 448 } ]
+
+10.	What is the gender distributions of victims of a crime? – (GRAPH)
+
+db.LA_crimes_since_2020.aggregate([{$match: {CrimeDescription: "VIOLATION OF TEMPORARY RESTRAINING ORDER"}}, {$group: {_id: "$VictimSex", count: {$sum: 1}}}, {$sort: {count: -1}}]);
+
+-	Result:
+[{_id: 'F', count: 660},
+  {_id: 'M', count: 222},
+  {_id: 'X', count: 6 }]
+-	The $match stage filters the documents to only include those with the desired CrimeDescription.
+-	The $group stage groups the documents by the VictimSex field and counts the number of documents in each group.
+-	The $sort stage sorts the results by the count in descending order.
+
+
+
